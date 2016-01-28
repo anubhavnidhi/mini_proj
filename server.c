@@ -1,43 +1,53 @@
+/* A simple server in the internet domain using TCP
+   The port number is passed as an argument */
 #include <stdio.h>
-#include "udp.h"
+#include <sys/types.h> 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <stdlib.h>
+#define PORTNUM 9000
+#define STRINGSIZE 64
 
-
-#define BUFFSIZE 1024
-
-//socket descriptor
-int sd;
+void error(char *msg)
+{
+    perror(msg);
+    exit(1);
+}
 
 int main(int argc, char *argv[])
 {
-	if(argc!=2)
-	{
-		fprintf(stderr,"Usage: server [portnum]\n");
-		exit(0);
-	}
+     int sockfd, newsockfd, portno, clilen;
+     char buffer[STRINGSIZE];
+     struct sockaddr_in serv_addr, cli_addr;
+     int n;
+     
+     sockfd = socket(AF_INET, SOCK_STREAM, 0);
+     if (sockfd < 0) 
+        error("ERROR opening socket");
+     bzero((char *) &serv_addr, sizeof(serv_addr));
+     portno = PORTNUM;
+     serv_addr.sin_family = AF_INET;
+     serv_addr.sin_addr.s_addr = INADDR_ANY;
+     serv_addr.sin_port = htons(portno);
+     if (bind(sockfd, (struct sockaddr *) &serv_addr,
+              sizeof(serv_addr)) < 0) 
+              error("ERROR on binding");
+     listen(sockfd,5);
+     clilen = sizeof(cli_addr);
+     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+     if (newsockfd < 0) 
+          error("ERROR on accept");
+     
+     while(1)
+	 {
+	     bzero(buffer,STRINGSIZE);
+	     n = read(newsockfd,buffer,sizeof(buffer));
+	     //if (n < 0) error("ERROR reading from socket");
+	     printf("Here is the message: %s\n",buffer);
+	     n = write(newsockfd,buffer,sizeof(buffer));
+	     //if (n < 0) error("ERROR writing to socket");
+	 }    
 
-	int portNum=atoi(argv[1]);
-	//Open the port
-	sd=UDP_Open(portNum);
-	assert(sd != -1);
-	
-	//Server listening in loop
-	while(1)
-	{
-		struct sockaddr_in addr;//structure to store address of incoming socket
-		char buffer[BUFFSIZE];//1kb buffer size for now
-		//read incoming message from port
-		int rc=UDP_Read(sd, &addr, buffer, BUFFSIZE, -1);
-		if(rc>0)
-		{
-			char * msg = strdup(buffer);
-			printf("Server recieved:%s\n",msg);
-			sprintf(buffer, "Server got your message: %s\n",msg);
-			rc = UDP_Write(sd, &addr, buffer, BUFFSIZE);//Send back the response to the client
-			if(rc < 0)
-				printf("Server UDP_write failed\n");
-		}
-
-	}
-
-	return 0;
+     return 0; 
 }

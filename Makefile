@@ -1,16 +1,14 @@
 CC=gcc
-CFLAGS= -Wall -O -lrt
 
-all: libudp sender receiver
+CFLAGS= -lrt
 
-sender: sender.c udp.o
-	$(CC) $(CFLAGS) sender.c udp.o -o sender
+all: client server
 
-receiver: receiver.c udp.o
-	$(CC) $(CFLAGS) receiver.c udp.o -o receiver
+client: client.c
+	$(CC) $(CFLAGS) client.c -o client
 
-libudp: udp.c
-	$(CC) $(CFLAGS) -c udp.c -o udp.o
+server: server.c
+	$(CC) $(CFLAGS) server.c -o server
 
 clean:
-	rm -f udp.o sender receiver libudp.so
+	rm -f client server

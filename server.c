@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 	     bzero(buffer,STRINGSIZE);
 	     n = read(newsockfd,buffer,sizeof(buffer));
 	     //if (n < 0) error("ERROR reading from socket");
-	     printf("Here is the message: %s\n",buffer);
+	     //printf("Here is the message: %s\n",buffer);
 	     n = write(newsockfd,buffer,sizeof(buffer));
 	     //if (n < 0) error("ERROR writing to socket");
 	 }    

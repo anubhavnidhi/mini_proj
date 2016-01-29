@@ -56,7 +56,7 @@ int main()
             rAverage+=remainderDelay;
 
             //printf("Child: Received string: %s\n", buf);
-            printf("rAverage = %llu nanoseconds\n", (long long unsigned int) rAverage);
+            printf("Latency Average = %llu nanoseconds\n", (long long unsigned int) ((rAverage*1.0)/2.0));
             printf("bAverage = %Lf bytes/nanoseconds\n", (long double)(2*STRINGSIZE*1.0)/(rAverage*1.0));
 
             exit(0);

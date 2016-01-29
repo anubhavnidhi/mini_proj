@@ -69,8 +69,8 @@ int main(int argc, char *argv[])
 	         error("ERROR reading from socket");
 	    //printf("Data: %s\n",buffer);
 	}
-	printf("rAverage = %llu nanoseconds\n", (long long unsigned int) rAverage/(numPackets));
-	printf("bAverage = %Lf bytes/nanoseconds\n", (long double)(2*numPackets*STRINGSIZE*1.0)/(rAverage*1.0));
+	printf("Latency Average = %llu nanoseconds\n", (long long unsigned int) ((rAverage*1.0)/2.0)/(numPackets));
+	printf("bAverage = %Lf bytes/nanoseconds\n", (long double)(2*numPackets*STRINGSIZE*1.0)/(rAverage*1.0)); 
 
     return 0;
 }

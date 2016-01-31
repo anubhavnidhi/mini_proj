@@ -1,3 +1,5 @@
+make
+
 echo "Sockets Latency"
 
 ./socket 4 1000

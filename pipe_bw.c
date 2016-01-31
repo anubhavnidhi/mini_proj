@@ -28,6 +28,8 @@ int main(int argc, char *argv[])
     int numPackets=atoi(argv[2]);
     int readpipe[2];
     int writepipe[2];
+    char temp[1] = "a";
+
     a=pipe(readpipe);
     b=pipe(writepipe);
     if (a == -1) { perror("pipe"); exit(EXIT_FAILURE); }
@@ -56,11 +58,11 @@ int main(int argc, char *argv[])
                 {
                     printf("Child can't write\n");
                 }        
-                if(read(writepipe[0],buf,sizeof(buf)) < 0)
+                if(read(writepipe[0],temp,sizeof(temp)) < 0)
                 {
                     printf("Parent can't read\n");
                 }
-                //printf("CHILD BUFFER: %s\n",buf);
+                //printf("CHILD BUFFER: %s\n",temp);
                 clock_gettime(CLOCK_MONOTONIC, &stop);
                 remainderDelay = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
                 rAverage+=remainderDelay;
@@ -68,7 +70,8 @@ int main(int argc, char *argv[])
             }
             //printf("Number %d\n",num);
             //printf("Child: Received string: %s\n", buf);
-            printf("Latency Average = %llu nanoseconds\n", (long long unsigned int) ((rAverage*1.0)/2.0)/(numPackets));
+            //printf("Latency Average = %llu nanoseconds\n", (long long unsigned int) ((rAverage*1.0)/2.0)/(numPackets));
+            printf("bAverage = %Lf bytes/nanoseconds\n", (long double)(numPackets*STRINGSIZE*1.0)/(rAverage/2.0)); 
             //printf("bAverage = %Lf bytes/nanoseconds\n", (long double)(2*numPackets*STRINGSIZE*1.0)/(rAverage*1.0));
 
             exit(0);
@@ -86,9 +89,9 @@ int main(int argc, char *argv[])
                     printf("Parent can't read\n");
                 }
 
-                //printf("%d PARENT BUFFER: %s\n",num,buf);
+                //printf("PARENT BUFFER: %s\n",buf);
 
-                if(write(writepipe[1],buf,strlen(buf)+1) < 0)
+                if(write(writepipe[1],temp,sizeof(temp)) < 0)
                 {
                     printf("Parent can't write\n");
                 }

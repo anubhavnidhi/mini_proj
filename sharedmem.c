@@ -23,7 +23,7 @@ pthread_cond_t  fill = PTHREAD_COND_INITIALIZER;
 
 int maxBuf;
 int threads;
-char* file;
+char *file;
 int *buffer;
 int full = 0;
 int use = 0;
@@ -86,15 +86,15 @@ void *consumer(void *arg) {
 /*
  * Get program arguments
  */
-void getargs(int *threads, int *maxBuf, char *file, int argc, char *argv[])
+void getargs(int *threads, int *maxBuf, char **file, int argc, char *argv[])
 {
     if (argc != 4) {
-	fprintf(stderr, "Usage: %s <threads> <buffers> <file>\n", argv[0]);
+	fprintf(stderr, "Usage: %s <threads> <buffer> <file>\n", argv[0]);
 	exit(1);
     }
-    *threads = atoi(argv[2]);
-    *maxBuf = atoi(argv[3]);
-    file = argv[4];
+    *threads = atoi(argv[1]);
+    *maxBuf = atoi(argv[2]);
+    *file = argv[3];
 }
 
 /*
@@ -104,52 +104,31 @@ int main(int argc, char *argv[]){
 
 	//Initializations
 	int i,fd;
-	getargs(&threads, &maxBuf, file, argc, argv);
-	printf("threads: %d, max buffer: %d filename: %s\n", threads, maxBuf, file);
-    
-	//Create child
-	int pid = fork();
-	if(pid < 0){
-		printf("Error creating child \n");
-		return -1;
-	}
-
+	getargs(&threads, &maxBuf, &file, argc, argv);
+	printf("threads: %d, max buffer size: %d filename: %s\n", threads, maxBuf, file);
+        
 	//Shared memory using mmap
-	fd = open(file, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
+	fd = open(file, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0660);
     	if (fd == -1) {
-		perror("Error opening file for writing");
+		fprintf(stderr,"Error opening file for writing");
 		return -1;
    	}
 	int result = write(fd, "", 1);
 	if (result != 1) {
 		close(fd);
-		perror("Error writing to file");
+		fprintf(stderr,"Error writing to file");
 		return -1;
 	}
     	// mmap the file
 	buffer = mmap(0, maxBuf, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (buffer == MAP_FAILED) {
 		close(fd);
-		perror("Error mmapping the file");
+		fprintf(stderr,"Error mmapping the file");
 		return -1;
 	}
 
-	//Create some threads...
-	pthread_t rqst[threads];
-	for(i = 0; i < maxBuf; i++){
-		buffer[i] = INT_MAX;
-	}
-	for(i = 0; i < threads; i++){
-		pthread_create(&rqst[i], NULL, consumer, NULL);
-	}
-
-	//Parent = Producer
-	while (1) {
-		pthread_mutex_lock(&mainmutex);
-	    	producer((void *) 1); //???
-	    	pthread_mutex_unlock(&mainmutex);
-	}
-
+	
+	munmap(0, maxBuf);
 	close(fd);
 	return 0;
 }

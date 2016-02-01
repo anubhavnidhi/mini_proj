@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 
   diff = (b-a);
 
-  printf("CLOCK %llu\n", diff);
+  //printf("CLOCK %llu\n", diff);
 
   time_in_seconds = ((double) diff / frequency)*0.001;// * sec_to_nsec;
   printf("Second: %lf\n", time_in_seconds);

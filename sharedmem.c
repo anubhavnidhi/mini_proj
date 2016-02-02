@@ -17,6 +17,7 @@
 #include <limits.h>
 
 #define MAXBUF 4*1024
+#define LOOPS  1*1024
 char *file;
 
 struct shmem {
@@ -25,21 +26,6 @@ struct shmem {
   sem_t empty;
   char buffer[MAXBUF];
 } shmem;
-
-
-/*
- * Producer
- */
-void producer() {
-	
-}
-
-/*
- * Consumer
- */
-void consumer() {
-	
-}
 
 /*
  * Get program arguments
@@ -62,7 +48,6 @@ int main(int argc, char *argv[]){
 	int i,fd;
 	struct shmem *ptr;
 	getargs(&file, argc, argv);
-	printf("filename: %s\n", file);
         
 	//Shared memory using mmap
 	fd = open(file, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0660);
@@ -70,14 +55,10 @@ int main(int argc, char *argv[]){
 		fprintf(stderr,"Error opening file for writing");
 		return -1;
    	}
-	int result = write(fd, &shmem, 1);
-	if (result != 1) {
-		close(fd);
-		fprintf(stderr,"Error writing to file");
-		return -1;
-	}
+	write(fd, &shmem, sizeof(struct shmem));
+	
     	// mmap the file
-	ptr = (struct shmem *) mmap(0, sizeof(struct shmem), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	ptr = (struct shmem *) mmap(NULL, sizeof(struct shmem), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (ptr == MAP_FAILED) {
 		close(fd);
 		fprintf(stderr,"Error mmapping the file");
@@ -94,18 +75,40 @@ int main(int argc, char *argv[]){
 	
 	char *temp = (char*)malloc(MAXBUF);
 	for(i = 0; i < MAXBUF; i++)
-		*((char*)temp+i) = 'A';
-	
-	if (fork() == 0)
-		producer();
-	
+		*((char*)temp+i) = 'X';
+
+	//Child process = Consumer
+	int pid = fork();
+	if (pid == 0){
+		char *tmp = (char *)malloc(MAXBUF);
+		for(i = 0; i < LOOPS; i++){
+			sem_wait(&ptr->full);
+			sem_wait(&ptr->mutex);
+			memcpy((void*)tmp, (void*)ptr->buffer, MAXBUF);
+			if (i == LOOPS-1) 
+				memcpy((void*)ptr->buffer, (void*)'Y', 1);
+			printf("Child complete...\n");
+			sem_post(&ptr->mutex);
+			sem_post(&ptr->empty);
+		}
+		exit(0);
+	}
+
 	//Measure Latency
+	//Parent process = Producer
 	//clock_gettime(CLOCK_MONOTONIC, &start);
-	consumer();
+	for(i = 0; i < LOOPS; i++){
+		sem_wait(&ptr->empty);
+		sem_wait(&ptr->mutex);
+		memcpy((void*)ptr->buffer, (void*)temp, MAXBUF);
+		printf("Parent complete...\n");
+      		sem_post(&ptr->mutex);
+      		sem_post(&ptr->full);
+    	}
 	//clock_gettime(CLOCK_MONOTONIC, &end);
 
 	printf("Complete...\n");
-	munmap(0, MAXBUF);
+	munmap(NULL, MAXBUF);
 	close(fd);
-	return 0;
+	exit(0);
 }

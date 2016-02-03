@@ -43,3 +43,17 @@ echo "Pipe Bandwidth"
 ./pipe_bw 65536 1000
 ./pipe_bw 262144 1000
 ./pipe_bw 524288 1000
+
+echo "Shared memory Latency"
+
+./sharedmem 4 1
+./sharedmem 16 1
+./sharedmem 64 1
+./sharedmem 256 1
+./sharedmem 1024 1
+./sharedmem 4096 1
+./sharedmem 16384 1
+./sharedmem 65536 1
+./sharedmem 262144 1
+./sharedmem 524288 1
+

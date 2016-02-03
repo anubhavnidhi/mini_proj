@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
 #include <semaphore.h>
@@ -16,9 +17,10 @@
 #include <sys/mman.h>
 #include <limits.h>
 
-#define MAXBUF 4*1024
-#define LOOPS  1*1024
-char *file;
+#define MAXBUF 512*1024
+int datasz;
+int itr;
+struct timespec start, stop;
 
 struct shmem {
   sem_t mutex;
@@ -30,13 +32,14 @@ struct shmem {
 /*
  * Get program arguments
  */
-void getargs(char **file, int argc, char *argv[])
+void getargs(int *datasz, int *itr, int argc, char *argv[])
 {
-    if (argc != 2) {
-	fprintf(stderr, "Usage: %s <file>\n", argv[0]);
+    if (argc != 3) {
+	fprintf(stderr, "Usage: %s <data_size> <iterations> \n", argv[0]);
 	exit(1);
     }
-    *file = argv[1];
+    *datasz = atoi(argv[1]);
+    *itr = atoi(argv[2]);
 }
 
 /*
@@ -47,10 +50,11 @@ int main(int argc, char *argv[]){
 	//Initializations
 	int i,fd;
 	struct shmem *ptr;
-	getargs(&file, argc, argv);
-        
+	getargs(&datasz, &itr, argc, argv);
+        //printf("%d %d \n", datasz, itr);
+
 	//Shared memory using mmap
-	fd = open(file, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0660);
+	fd = open("buf.txt", O_RDWR | O_CREAT | O_TRUNC, (mode_t)0660);
     	if (fd == -1) {
 		fprintf(stderr,"Error opening file for writing");
 		return -1;
@@ -73,42 +77,39 @@ int main(int argc, char *argv[]){
 		fprintf(stderr,"sem_init error"), exit(-2);
 	setbuf(stdout, NULL);
 	
-	char *temp = (char*)malloc(MAXBUF);
-	for(i = 0; i < MAXBUF; i++)
-		*((char*)temp+i) = 'X';
+	char *temp = (char*)malloc(datasz * sizeof(char));
+	for(i = 0; i < datasz; i++)
+		*((char*)temp+i) = 't';
 
 	//Child process = Consumer
 	int pid = fork();
 	if (pid == 0){
-		char *tmp = (char *)malloc(MAXBUF);
-		for(i = 0; i < LOOPS; i++){
-			sem_wait(&ptr->full);
-			sem_wait(&ptr->mutex);
-			memcpy((void*)tmp, (void*)ptr->buffer, MAXBUF);
-			if (i == LOOPS-1) 
-				memcpy((void*)ptr->buffer, (void*)'Y', 1);
-			printf("Child complete...\n");
-			sem_post(&ptr->mutex);
-			sem_post(&ptr->empty);
-		}
+		char *tmp = (char *)malloc(datasz * sizeof(char));
+		uint64_t rtt ;
+		//Measure Latency
+		clock_gettime(CLOCK_MONOTONIC, &start);
+		sem_wait(&ptr->full);
+		sem_wait(&ptr->mutex);
+		memcpy((void*)tmp, (void*)ptr->buffer, datasz);
+		clock_gettime(CLOCK_MONOTONIC, &stop);
+		rtt = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
+		//printf("Data %s of data size %d\n", tmp, datasz);
+		printf("Latency for %dB = %llu nanoseconds\n", datasz, (long long unsigned int) ((rtt*1.0)/2.0) );
+		//printf("Child complete...\n");
+		sem_post(&ptr->mutex);
+		sem_post(&ptr->empty);		
 		exit(0);
 	}
-
-	//Measure Latency
-	//Parent process = Producer
-	//clock_gettime(CLOCK_MONOTONIC, &start);
-	for(i = 0; i < LOOPS; i++){
-		sem_wait(&ptr->empty);
-		sem_wait(&ptr->mutex);
-		memcpy((void*)ptr->buffer, (void*)temp, MAXBUF);
-		printf("Parent complete...\n");
-      		sem_post(&ptr->mutex);
-      		sem_post(&ptr->full);
-    	}
-	//clock_gettime(CLOCK_MONOTONIC, &end);
-
-	printf("Complete...\n");
-	munmap(NULL, MAXBUF);
+	
+	//Parent process = Producer	
+	sem_wait(&ptr->empty);
+	sem_wait(&ptr->mutex);
+	memcpy((void*)ptr->buffer, (void*)temp, datasz);
+	//printf("Parent complete...\n");
+      	sem_post(&ptr->mutex);
+      	sem_post(&ptr->full);
+	
 	close(fd);
+	//printf("Complete...\n");
 	exit(0);
 }

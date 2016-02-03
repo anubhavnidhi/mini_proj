@@ -16,14 +16,16 @@ int main(int argc, char **argv)
   
   //double t1=tim.tv_sec+(tim.tv_usec/1000000.0);  
     
-  for (i = 0; i<iterations; i++)
+  for (i = 0; i < iterations; i++)
     {
-        sum += i;
-        
+      sum += i;
     }
+  
+  //sleep(1);
    gettimeofday(&stop, NULL);
     diff = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_usec - start.tv_usec;
-    printf("timeofday %lf\n",diff/1000000.0);//double t2=tim.tv_sec+(tim.tv_usec/1000000.0);
+    printf("timeofday %lf\n",diff);
+    //printf("timeofday %lf\n",diff/100.0);//double t2=tim.tv_sec+(tim.tv_usec/1000000.0);
   //printf("\nStopped at %d",i);
   /*  
   gettimeofday(&tim, NULL);  

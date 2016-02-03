@@ -18,17 +18,18 @@ int main(int argc, char *argv[])
     double diff = 0;
     int sum = 0;
     clock_gettime(CLOCK_MONOTONIC, &start);
-	for (i = 0; i<iterations; i++)
+	for (i = 0; i < iterations; i++)
     {
-        sum += i;
-        //clock_gettime(CLOCK_MONOTONIC, &stop);
-        //diff = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
-    
+      sum += i;
     }
+  
+    //sleep(1);
     clock_gettime(CLOCK_MONOTONIC, &stop);
     diff = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
     
-    printf("clock_gettime %lf\n",diff/1000000000.0);
+    printf("clock_gettime %lf\n",diff);
+    //printf("clock_gettime %lf\n",diff);
+    
     /*
     clock_gettime(CLOCK_MONOTONIC, &stop);
 	remainderDelay = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;

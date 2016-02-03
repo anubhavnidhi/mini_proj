@@ -13,23 +13,45 @@ uint64_t remainderDelay;//in nano seconds
 struct timespec start, stop;
 uint64_t rAverage; 
 
+long sort(long* number, int n)
+{
+
+    int temp=0,j,i;
+    for(i=1;i<n;i++)
+    {
+        for(j=0;j<n-i;j++)
+        {
+            if(number[j] >number[j+1])
+            {
+                temp=number[j];
+                number[j]=number[j+1];
+                number[j+1]=temp;
+            }
+        }
+    }
+    //for(i=0;i<n;i++)
+    //    printf("%llu\n",number[i]);
+    
+    return number[n/2]; 
+
+}
+
 int main(int argc, char *argv[])
 {
     pid_t pid;
-    int a,b;
+    int a,b,j;
     /* Hope this is big enough. */
     if (argc < 3)
     {
         printf("Error : run code as ./client <size> <num-iterations>\n");
         return -1;
     }
-    int STRINGSIZE = atoi(argv[1]);
-    char buf[STRINGSIZE];
+    unsigned long STRINGSIZE = atoi(argv[1]);
     int numPackets=atoi(argv[2]);
+    char buf[STRINGSIZE],iter=0;
+    unsigned long latency[numPackets];
     int readpipe[2];
     int writepipe[2];
-    char temp[1] = "a";
-
     a=pipe(readpipe);
     b=pipe(writepipe);
     if (a == -1) { perror("pipe"); exit(EXIT_FAILURE); }
@@ -58,23 +80,31 @@ int main(int argc, char *argv[])
                 {
                     printf("Child can't write\n");
                 }        
-                if(read(writepipe[0],temp,sizeof(temp)) < 0)
+                if(read(writepipe[0],buf,sizeof(buf)) < 0)
                 {
                     printf("Parent can't read\n");
                 }
-                //printf("CHILD BUFFER: %s\n",temp);
+                //printf("CHILD BUFFER: %s\n",buf);
                 clock_gettime(CLOCK_MONOTONIC, &stop);
                 remainderDelay = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
+                //printf("%d %llu\n",iter,(long long unsigned int)remainderDelay);
                 rAverage+=remainderDelay;
+                latency[iter] = remainderDelay/2.0;
+                iter++;
                 num++;
             }
             //printf("Number %d\n",num);
             //printf("Child: Received string: %s\n", buf);
             //printf("Latency Average = %llu nanoseconds\n", (long long unsigned int) ((rAverage*1.0)/2.0)/(numPackets));
-            printf("bAverage = %Lf bytes/nanoseconds\n", (long double)(numPackets*STRINGSIZE*1.0)/(rAverage/2.0)); 
             //printf("bAverage = %Lf bytes/nanoseconds\n", (long double)(2*numPackets*STRINGSIZE*1.0)/(rAverage*1.0));
-
-            exit(0);
+            /*printf("\nSet of latencies");
+            for(j=0;j<iter;j++)
+                printf("\n%d %llu",j,latency[j]);*/
+            long median = sort(latency,iter);
+            double micro = median/(float)1000.0;
+            //printf("\nMed %llu, %lf\n",median,micro);
+            printf("\n%d %lf",STRINGSIZE,(STRINGSIZE/micro));
+            exit(0); 
     }
     else
     { 
@@ -89,9 +119,9 @@ int main(int argc, char *argv[])
                     printf("Parent can't read\n");
                 }
 
-                //printf("PARENT BUFFER: %s\n",buf);
+                //printf("%d PARENT BUFFER: %s\n",num,buf);
 
-                if(write(writepipe[1],temp,sizeof(temp)) < 0)
+                if(write(writepipe[1],buf,strlen(buf)+1) < 0)
                 {
                     printf("Parent can't write\n");
                 }

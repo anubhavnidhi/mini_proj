@@ -8,7 +8,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <errno.h>
-
+#include <netinet/tcp.h>
 #define PORTNUM 9000
 //#define STRINGSIZE 64
 
@@ -18,6 +18,30 @@ struct timespec start, stop;
 
 uint64_t rAverage; 
 
+
+
+long sort(long* number, int n)
+{
+
+    int temp=0,j,i;
+    for(i=1;i<n;i++)
+    {
+        for(j=0;j<n-i;j++)
+        {
+            if(number[j] >number[j+1])
+            {
+                temp=number[j];
+                number[j]=number[j+1];
+                number[j+1]=temp;
+            }
+        }
+    }
+    //for(i=0;i<n;i++)
+    //    printf("%llu\n",number[i]);
+    
+    return number[n/2]; 
+
+}
 
 int main(int argc, char *argv[])
 {
@@ -30,14 +54,15 @@ int main(int argc, char *argv[])
         printf("Error : run code as ./socket <size> <num-iterations>\n");
         return -1;
     }
-    int STRINGSIZE = atoi(argv[1]);
-    char buffer[STRINGSIZE];
+    unsigned long STRINGSIZE = atoi(argv[1]);
     int numPackets=atoi(argv[2]);
+    unsigned long latency[numPackets];
+    int iter = 0;
+    char buffer[STRINGSIZE];
     int ser_sock;
     struct sockaddr_in self;
     char buf[STRINGSIZE];
-    char temp[1] = "a";
-
+    
     portno = PORTNUM;
     pid=fork();
     if(pid==-1)
@@ -77,22 +102,32 @@ int main(int argc, char *argv[])
             if (n < 0) 
                  perror("ERROR writing to socket");
             //bzero(buffer,STRINGSIZE);
-            n = recv(sockfd,temp,sizeof(temp),0);
-            //printf("CHILD BUFFER: %s\n",temp);
+            n = recv(sockfd,buffer,sizeof(buffer),0);
+            //printf("CHILD BUFFER: %s\n",buffer);
             if (n < 0) 
                  perror("ERROR reading from socket");
             //printf("Read done\n");
             clock_gettime(CLOCK_MONOTONIC, &stop);
             remainderDelay = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
             rAverage+=remainderDelay;
-            
+            latency[iter] = remainderDelay/2.0;
+            //printf("%d %llu\n",iter,(long long unsigned int)remainderDelay);
+            iter++;
             if (n < 0) 
                  perror("ERROR reading from socket");
             //printf("Data: %s\n",buffer);
         }
         //printf("Latency Average = %llu nanoseconds\n", (long long unsigned int) ((rAverage*1.0)/2.0)/(numPackets));
-        printf("bAverage = %Lf bytes/nanoseconds\n", (long double)(numPackets*STRINGSIZE*1.0)/(rAverage/2.0)); 
+        //printf("bAverage = %Lf bytes/nanoseconds\n", (long double)(2*numPackets*STRINGSIZE*1.0)/(rAverage*1.0)); 
+        /*printf("\nSet of latencies");
+        for(j=0;j<iter;j++)
+            printf("\n%d %llu",j,latency[j]);*/
+        unsigned long median = sort(latency,iter);
+        double micro = median/(float)1000.0;
+        //printf("\nMed %llu, %lf\n",median,micro);
+        printf("\n%d %lf",STRINGSIZE,(STRINGSIZE/micro));
         close(sockfd);
+        exit(0);
     }
     else
     {
@@ -103,7 +138,7 @@ int main(int argc, char *argv[])
             exit(errno);
         }
         int yes=1;
-        if (setsockopt(ser_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
+        if (setsockopt(ser_sock, IPPROTO_TCP, TCP_NODELAY,/*SO_REUSEADDR,*/ &yes, sizeof(yes)) == -1) {
             perror("setsockopt");
             exit(1);
         }
@@ -140,8 +175,8 @@ int main(int argc, char *argv[])
         int num = 0;
         while(num<numPackets){
             recv(clientfd, buf, sizeof(buf), 0);
-            //printf("PARENT BUFFER: %s\n",buf);
-            send(clientfd, temp, sizeof(temp), 0);
+            //printf("%d PARENT BUFFER: %s\n",num,buf);
+            send(clientfd, buf, sizeof(buf), 0);
             //printf("%s\n",buf);
             num++;
         }
@@ -153,5 +188,6 @@ int main(int argc, char *argv[])
         close(ser_sock);
      
     }
+
     return 0;
 }

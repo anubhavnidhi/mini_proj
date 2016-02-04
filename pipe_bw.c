@@ -85,13 +85,14 @@ int main(int argc, char *argv[])
                 {
                     printf("Child can't write\n");
                 }
-                printf("CHILD %d\n",num);           
+                //printf("CHILD %d\n",num);           
                 num++;
             }
             if(read(writepipe[0],s,sizeof(s)) < 0)
                 {
                     printf("Parent can't read\n");
                 }
+              //  printf("CHILD READ\n");
             clock_gettime(CLOCK_MONOTONIC, &stop);
             remainderDelay = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
             printf("%llu delay %d\n",remainderDelay,numPackets);
@@ -111,13 +112,14 @@ int main(int argc, char *argv[])
                 {
                     printf("Parent can't read\n");
                 } 
-                printf("PAR %d: %s\n",num,buf); 
+                //printf("PAR %d: %s\n",num,buf); 
                 num++;
             }
             if(write(writepipe[1],s,strlen(s)+1) < 0)
             {
                 printf("Parent can't write\n");
             }
+            //printf("PAR WRITE\n");
     }
     close(readpipe[1]);
     close(writepipe[0]);

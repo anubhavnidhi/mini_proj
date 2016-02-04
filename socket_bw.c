@@ -105,7 +105,8 @@ int main(int argc, char *argv[])
         
         clock_gettime(CLOCK_MONOTONIC, &stop);
         remainderDelay = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
-        double micro = ((remainderDelay)/(float)1000.0)/numPackets;
+        printf("%llu delay %d\n",remainderDelay,numPackets);
+        double micro = (remainderDelay/(double)numPackets)/(double)STRINGSIZE;
         printf("\n%d %lf",STRINGSIZE,STRINGSIZE/micro);
         close(sockfd);
         exit(0);

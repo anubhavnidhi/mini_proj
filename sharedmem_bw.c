@@ -18,7 +18,7 @@
 #include <limits.h>
 #include <float.h>
 
-#define MAXBUF 512*1024
+#define MAXBUF 1024*1024
 #define LOOPS 1000
 int datasz;
 int itr;
@@ -110,7 +110,7 @@ int main(int argc, char *argv[]){
 
 		//write child data
 		sem_wait(&ptr->mutex);
-		memcpy((void*)ptr->buffer, (void*)ctemp, datasz);
+		memcpy((void*)ptr->buffer, (void*)ctemp, 1);
 		//printf("Child: Data written %s \n", ctemp);		
 	      	sem_post(&ptr->mutex);		
 	      	sem_post(&ptr->child);	
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]){
 		char *ptmp = (char *)malloc(1 * sizeof(char));
 		sem_wait(&ptr->child);
 		sem_wait(&ptr->mutex);
-		memcpy((void*)ptmp, (void*)ptr->buffer, datasz);
+		memcpy((void*)ptmp, (void*)ptr->buffer, 1);
 		//printf("Parent: Data read %s \n", ptmp);	
 		sem_post(&ptr->mutex);
 		//printf("Parent complete...\n");
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]){
 	}
    }
 	if(minbw != DBL_MAX)
-		printf("%dB = %lf ns\n", datasz, minbw );
+		printf("%dB = %lf\n", datasz, minbw );
 	close(fd);
 	//printf("Complete...\n");
 	exit(0);

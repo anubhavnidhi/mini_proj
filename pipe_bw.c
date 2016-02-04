@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <time.h>
-
+#include "rdtsc.h"
 #include <netdb.h> 
 
 //#define STRINGSIZE 64
@@ -32,12 +32,15 @@ long sort(long* number, int n)
     //for(i=0;i<n;i++)
     //    printf("%llu\n",number[i]);
     
-    return number[n/2]; 
+    return number[0]; 
 
 }
 
 int main(int argc, char *argv[])
 {
+    //unsigned long long begin,end,diff;
+    //unsigned long long frequency = 2128047;
+  
     pid_t pid;
     int a,b,j;
     /* Hope this is big enough. */
@@ -49,6 +52,7 @@ int main(int argc, char *argv[])
     unsigned long STRINGSIZE = atoi(argv[1]);
     int numPackets=atoi(argv[2]);
     char buf[STRINGSIZE],iter=0;
+    char s[1]="a";
     unsigned long latency[numPackets];
     int readpipe[2];
     int writepipe[2];
@@ -73,24 +77,23 @@ int main(int argc, char *argv[])
             memset( buf, 'a', sizeof(char)*STRINGSIZE );
             buf[STRINGSIZE-1]='\0';
             int num = 0;
+            clock_gettime(CLOCK_MONOTONIC, &start);
+                
             while(num<numPackets)
             {
-                clock_gettime(CLOCK_MONOTONIC, &start);
+                //begin = rdtsc();
                 if(write(readpipe[1],buf,strlen(buf)+1) < 0)
                 {
                     printf("Child can't write\n");
                 }        
-                if(read(writepipe[0],buf,sizeof(buf)) < 0)
+                if(read(writepipe[0],s,sizeof(s)) < 0)
                 {
                     printf("Parent can't read\n");
                 }
                 //printf("CHILD BUFFER: %s\n",buf);
-                clock_gettime(CLOCK_MONOTONIC, &stop);
-                remainderDelay = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
-                //printf("%d %llu\n",iter,(long long unsigned int)remainderDelay);
-                rAverage+=remainderDelay;
-                latency[iter] = remainderDelay/2.0;
-                iter++;
+                //end = rdtsc();
+
+                  //diff = (end-begin);
                 num++;
             }
             //printf("Number %d\n",num);
@@ -100,10 +103,17 @@ int main(int argc, char *argv[])
             /*printf("\nSet of latencies");
             for(j=0;j<iter;j++)
                 printf("\n%d %llu",j,latency[j]);*/
-            long median = sort(latency,iter);
-            double micro = median/(float)1000.0;
+            clock_gettime(CLOCK_MONOTONIC, &stop);
+            remainderDelay = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
+            //printf("%d %llu\n",iter,(long long unsigned int)remainderDelay);
+            rAverage+=remainderDelay;
+            latency[iter] = remainderDelay/2.0;
+            //  latency[iter] = ((double) diff / frequency)*1000000.0/2.0;
+            iter++;
+            //long median = sort(latency,iter);
+            double micro = (remainderDelay/2.0)/(float)1000.0;
             //printf("\nMed %llu, %lf\n",median,micro);
-            printf("\n%d %lf",STRINGSIZE,(STRINGSIZE/micro));
+            printf("\n%d %lf",STRINGSIZE*numPackets,micro);
             exit(0); 
     }
     else
@@ -121,7 +131,7 @@ int main(int argc, char *argv[])
 
                 //printf("%d PARENT BUFFER: %s\n",num,buf);
 
-                if(write(writepipe[1],buf,strlen(buf)+1) < 0)
+                if(write(writepipe[1],s,strlen(s)+1) < 0)
                 {
                     printf("Parent can't write\n");
                 }

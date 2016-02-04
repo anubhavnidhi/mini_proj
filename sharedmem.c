@@ -51,7 +51,7 @@ int main(int argc, char *argv[]){
 	//Initializations
 	int i,fd;
 	struct shmem *ptr;
-	uint64_t rtt ;
+	uint64_t rtt, minrtt = UINT32_MAX;
 	getargs(&datasz, &itr, argc, argv);
         //printf("%d %d \n", datasz, itr);
 	
@@ -134,9 +134,13 @@ int main(int argc, char *argv[]){
 
 		clock_gettime(CLOCK_MONOTONIC, &stop);
 		rtt = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
-		printf("%dB = %llu nanoseconds\n", datasz, (long long unsigned int) ((rtt*1.0)/2.0) );
+		//printf("%dB = %llu us\n", datasz, (long long unsigned int) ((rtt*1.0)/2000.0) );
+		if(minrtt > rtt)
+			minrtt = rtt;
+		
 	}
    }
+	printf("%dB = %llu ns\n", datasz, (long long unsigned int) ((minrtt*1.0)/2.0) );
 	close(fd);
 	//printf("Complete...\n");
 	exit(0);

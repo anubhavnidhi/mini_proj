@@ -6,6 +6,7 @@
 #include <time.h>
 #include "rdtsc.h"
 #include <netdb.h> 
+#include <float.h>
 
 //#define STRINGSIZE 64
 
@@ -56,7 +57,7 @@ int main(int argc, char *argv[])
     char buf[STRINGSIZE];
     char s[1]="a";
     unsigned long bw[iterations];
-    double min = 999999999999;
+    double min = DBL_MAX;
     int readpipe[2];
     int writepipe[2];
     int iter=0;
@@ -136,8 +137,8 @@ int main(int argc, char *argv[])
         iter++;
     }
     
-
-    printf("\n%d %lf\n",STRINGSIZE,min);
+    if(min != DBL_MAX)
+   	 printf("\n%d %lf\n",STRINGSIZE,min);
     
     close(readpipe[1]);
     close(writepipe[0]);

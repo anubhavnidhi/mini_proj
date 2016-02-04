@@ -2,7 +2,7 @@ CC=gcc
 
 CFLAGS= -lrt
 
-all: client server pipe pipe_bw sharedmem rdtsc timeofday gettime socket socket_bw
+all: client server pipe pipe_bw sharedmem sharedmem_bw rdtsc timeofday gettime socket socket_bw
 
 client: client.c
 	$(CC) $(CFLAGS) client.c -o client
@@ -29,10 +29,13 @@ socket: socket.c
 	$(CC) $(CFLAGS) socket.c -o socket
 
 clean:
-	rm -f client server pipe rdtsc timeofday gettime socket pipe_bw socket_bw sharedmem
+	rm -f client server pipe rdtsc timeofday gettime socket pipe_bw socket_bw sharedmem sharedmem_bw
 
 pipe_bw: pipe_bw.c
 	$(CC) $(CFLAGS) pipe_bw.c -o pipe_bw
 
 socket_bw: socket_bw.c
 	$(CC) $(CFLAGS) socket_bw.c -o socket_bw
+
+sharedmem_bw: sharedmem_bw.c
+	$(CC) $(CFLAGS) sharedmem_bw.c -o sharedmem_bw

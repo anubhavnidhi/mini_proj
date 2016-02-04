@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <limits.h>
+#include <float.h>
 
 #define MAXBUF 512*1024
 #define LOOPS 1000
@@ -51,6 +52,7 @@ int main(int argc, char *argv[]){
 
 	//Initializations
 	int i,fd, j, k;
+	double latency, bw, minbw = DBL_MAX;
 	struct shmem *ptr;
 	uint64_t rtt, minrtt = UINT32_MAX;
 	getargs(&datasz, &itr, argc, argv);
@@ -86,10 +88,12 @@ int main(int argc, char *argv[]){
 	for(i = 0; i < datasz; i++)
 		*((char*)temp+i) = 't';
 
-  for(i = 0; i < itr; i++){	
-	//Child process
+  	
+	
 	int pid = fork();
+	for(i = 0; i < itr; i++){
 	if (pid == 0){
+		//Child process
 		char *tmp = (char *)malloc(datasz * sizeof(char));
 		char *ctemp = (char*)malloc(1 * sizeof(char));
 		*((char*)ctemp) = 's';
@@ -111,11 +115,9 @@ int main(int argc, char *argv[]){
 	      	sem_post(&ptr->mutex);		
 	      	sem_post(&ptr->child);	
 		//printf("Child complete...\n");
-		exit(0);
-	}
-	
-	//Parent process
+	}	
 	else{
+		//Parent process
 		clock_gettime(CLOCK_MONOTONIC, &start);	
 		//write parent data
 		for(j = 0; j < LOOPS; j++){	
@@ -137,13 +139,16 @@ int main(int argc, char *argv[]){
 
 		clock_gettime(CLOCK_MONOTONIC, &stop);
 		rtt = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
-		//printf("%dB = %llu us\n", datasz, (long long unsigned int) ((rtt*1.0)/2000.0) );
-		if(minrtt > rtt)
-			minrtt = rtt;
-		
+		//printf("%dB = %lf us\n", datasz, (double) (rtt/2000.0) );
+		latency = (double) rtt/2000;
+		bw = (datasz * LOOPS)/latency;
+		if(minbw > bw)
+			minbw = bw;
+		//printf("%dB = %lf ns\n", datasz, bw );
 	}
    }
-	printf("%dB = %llu ns\n", datasz, (long long unsigned int) ((minrtt*1.0)/2.0) );
+	if(minbw != DBL_MAX)
+		printf("%dB = %lf ns\n", datasz, minbw );
 	close(fd);
 	//printf("Complete...\n");
 	exit(0);

@@ -17,7 +17,7 @@
 #include <sys/mman.h>
 #include <limits.h>
 
-#define MAXBUF 512*1024
+#define MAXBUF 1024*1024
 int datasz;
 int itr;
 struct timespec start, stop;
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]){
 	//initialize semaphores
 	if(sem_init(&ptr->mutex, 1, 1) != 0 )
 		fprintf(stderr,"sem_init error"), exit(-2);
-	if(sem_init(&ptr->empty, 1, MAXBUF) != 0 )
+	if(sem_init(&ptr->empty, 1, 1) != 0 )
 		fprintf(stderr,"sem_init error"), exit(-2);
 	if(sem_init(&ptr->full, 1, 0) != 0 )
 		fprintf(stderr,"sem_init error"), exit(-2);
@@ -85,10 +85,10 @@ int main(int argc, char *argv[]){
 	for(i = 0; i < datasz; i++)
 		*((char*)temp+i) = 't';
 
-  for(i = 0; i < itr; i++){	
-	//Child process
 	int pid = fork();
+        for(i = 0; i < itr; i++){	
 	if (pid == 0){
+		//Child process
 		char *tmp = (char *)malloc(datasz * sizeof(char));
 		char *ctemp = (char*)malloc(1 * sizeof(char));
 		*((char*)ctemp) = 's';
@@ -97,28 +97,26 @@ int main(int argc, char *argv[]){
 		sem_wait(&ptr->full);
 		sem_wait(&ptr->mutex);
 		memcpy((void*)tmp, (void*)ptr->buffer, datasz);
-		printf("Child: Data read %s of data size %d\n", tmp, datasz);
+		//printf("Child: Data read \n"); //%s of data size %d\n", tmp, datasz);
 		sem_post(&ptr->mutex);
 		sem_post(&ptr->empty);
 		
 		//write child data
 		sem_wait(&ptr->mutex);
-		memcpy((void*)ptr->buffer, (void*)ctemp, datasz);
-		printf("Child: Data written %s \n", ctemp);		
+		memcpy((void*)ptr->buffer, (void*)ctemp, 1);
+		//printf("Child: Data written %s \n", ctemp);		
 	      	sem_post(&ptr->mutex);		
 	      	sem_post(&ptr->child);	
-		//printf("Child complete...\n");
-		exit(0);
+		//printf("Child complete...\n");		
 	}
-	
-	//Parent process
 	else{
+		//Parent process
 		clock_gettime(CLOCK_MONOTONIC, &start);	
 		//write parent data
 		sem_wait(&ptr->empty);
 		sem_wait(&ptr->mutex);
 		memcpy((void*)ptr->buffer, (void*)temp, datasz);
-		printf("Parent: Data written %s of data size %d\n", temp, datasz);
+		//printf("Parent: Data written \n"); //%s of data size %d\n", temp, datasz);
 	      	sem_post(&ptr->mutex);
 	      	sem_post(&ptr->full);
 		
@@ -126,8 +124,8 @@ int main(int argc, char *argv[]){
 		char *ptmp = (char *)malloc(1 * sizeof(char));
 		sem_wait(&ptr->child);
 		sem_wait(&ptr->mutex);
-		memcpy((void*)ptmp, (void*)ptr->buffer, datasz);
-		printf("Parent: Data read %s \n", ptmp);	
+		memcpy((void*)ptmp, (void*)ptr->buffer, 1);
+		//printf("Parent: Data read %s \n", ptmp);	
 		sem_post(&ptr->mutex);
 		//printf("Parent complete...\n");
 
@@ -137,9 +135,10 @@ int main(int argc, char *argv[]){
 		if(minrtt > rtt)
 			minrtt = rtt;
 		
-	}
-   }
-	printf("%dB = %llu ns\n", datasz, (long long unsigned int) ((minrtt*1.0)/2.0) );
+	  }
+       }
+	if(minrtt != UINT32_MAX)
+		printf("%dB = %lf us\n", datasz, (double) (minrtt/2000.0) );
 	close(fd);
 	//printf("Complete...\n");
 	exit(0);

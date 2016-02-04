@@ -26,6 +26,7 @@ struct shmem {
   sem_t mutex;
   sem_t full;
   sem_t empty;
+  sem_t child;
   char buffer[MAXBUF];
 } shmem;
 
@@ -50,9 +51,10 @@ int main(int argc, char *argv[]){
 	//Initializations
 	int i,fd;
 	struct shmem *ptr;
+	uint64_t rtt ;
 	getargs(&datasz, &itr, argc, argv);
         //printf("%d %d \n", datasz, itr);
-
+	
 	//Shared memory using mmap
 	fd = open("buf.txt", O_RDWR | O_CREAT | O_TRUNC, (mode_t)0660);
     	if (fd == -1) {
@@ -71,9 +73,11 @@ int main(int argc, char *argv[]){
 	//initialize semaphores
 	if(sem_init(&ptr->mutex, 1, 1) != 0 )
 		fprintf(stderr,"sem_init error"), exit(-2);
-	if(sem_init(&ptr->empty, 0, MAXBUF) != 0 )
+	if(sem_init(&ptr->empty, 1, MAXBUF) != 0 )
 		fprintf(stderr,"sem_init error"), exit(-2);
-	if(sem_init(&ptr->full, 0, 0) != 0 )
+	if(sem_init(&ptr->full, 1, 0) != 0 )
+		fprintf(stderr,"sem_init error"), exit(-2);
+	if(sem_init(&ptr->child, 1, 0) != 0 )
 		fprintf(stderr,"sem_init error"), exit(-2);
 	setbuf(stdout, NULL);
 	
@@ -81,34 +85,58 @@ int main(int argc, char *argv[]){
 	for(i = 0; i < datasz; i++)
 		*((char*)temp+i) = 't';
 
-	//Child process = Consumer
+  for(i = 0; i < itr; i++){	
+	//Child process
 	int pid = fork();
 	if (pid == 0){
 		char *tmp = (char *)malloc(datasz * sizeof(char));
-		uint64_t rtt ;
-		//Measure Latency
-		clock_gettime(CLOCK_MONOTONIC, &start);
+		char *ctemp = (char*)malloc(datasz * sizeof(char));
+		for(i = 0; i < datasz; i++)
+			*((char*)ctemp+i) = 's';
+
+		//read parent's data
 		sem_wait(&ptr->full);
 		sem_wait(&ptr->mutex);
 		memcpy((void*)tmp, (void*)ptr->buffer, datasz);
-		clock_gettime(CLOCK_MONOTONIC, &stop);
-		rtt = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
-		//printf("Data %s of data size %d\n", tmp, datasz);
-		printf("Latency for %dB = %llu nanoseconds\n", datasz, (long long unsigned int) ((rtt*1.0)/2.0) );
-		//printf("Child complete...\n");
+		//printf("Child: Data read %s of data size %d\n", tmp, datasz);
 		sem_post(&ptr->mutex);
-		sem_post(&ptr->empty);		
+		sem_post(&ptr->empty);
+		
+		//write child data
+		sem_wait(&ptr->mutex);
+		memcpy((void*)ptr->buffer, (void*)ctemp, datasz);
+		//printf("Child: Data written %s of data size %d\n", ctemp, datasz);		
+	      	sem_post(&ptr->mutex);		
+	      	sem_post(&ptr->child);	
+		//printf("Child complete...\n");
 		exit(0);
 	}
 	
-	//Parent process = Producer	
-	sem_wait(&ptr->empty);
-	sem_wait(&ptr->mutex);
-	memcpy((void*)ptr->buffer, (void*)temp, datasz);
-	//printf("Parent complete...\n");
-      	sem_post(&ptr->mutex);
-      	sem_post(&ptr->full);
-	
+	//Parent process
+	else{
+		clock_gettime(CLOCK_MONOTONIC, &start);	
+		//write parent data
+		sem_wait(&ptr->empty);
+		sem_wait(&ptr->mutex);
+		memcpy((void*)ptr->buffer, (void*)temp, datasz);
+		//printf("Parent: Data written %s of data size %d\n", temp, datasz);
+	      	sem_post(&ptr->mutex);
+	      	sem_post(&ptr->full);
+		
+		//read child's data
+		char *ptmp = (char *)malloc(datasz * sizeof(char));
+		sem_wait(&ptr->child);
+		sem_wait(&ptr->mutex);
+		memcpy((void*)ptmp, (void*)ptr->buffer, datasz);
+		//printf("Parent: Data read %s of data size %d\n", ptmp, datasz);	
+		sem_post(&ptr->mutex);
+		//printf("Parent complete...\n");
+
+		clock_gettime(CLOCK_MONOTONIC, &stop);
+		rtt = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
+		printf("%dB = %llu nanoseconds\n", datasz, (long long unsigned int) ((rtt*1.0)/2.0) );
+	}
+   }
 	close(fd);
 	//printf("Complete...\n");
 	exit(0);

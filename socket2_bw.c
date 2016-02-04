@@ -52,11 +52,11 @@ int main(int argc, char *argv[])
         return -1;
     }
     unsigned long STRINGSIZE = atoi(argv[1]);
-    int numPackets=1;
+    int numPackets=STRINGSIZE/16384;
     int iterations = atoi(argv[2]);
     unsigned long latency[numPackets];
     int iter = 0;
-    char buffer[STRINGSIZE];
+    char buffer[16385];
     char s[1]="a";
     int ser_sock;
     struct sockaddr_in self;
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
                 perror("ERROR connecting");
 
 
-            memset( buffer, 'a', sizeof(char)*STRINGSIZE );
+            memset( buffer, 'a', 16384);
             buffer[STRINGSIZE-1]='\0';
             clock_gettime(CLOCK_MONOTONIC, &start);
             
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
             clock_gettime(CLOCK_MONOTONIC, &stop);
             remainderDelay = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
             double micro = (remainderDelay/2000.0);
-            double bw = STRINGSIZE*numPackets/micro;
+            double bw = STRINGSIZE/micro;
             //printf("\nBW : %lf",bw);
             if (bw<min)
                 min = bw;

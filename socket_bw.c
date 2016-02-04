@@ -63,7 +63,6 @@ int main(int argc, char *argv[])
     char buf[STRINGSIZE];
     unsigned long bw[iterations];
     double min = 999999999999;
-    
     portno = PORTNUM;
     pid=fork();
     if(pid==-1)

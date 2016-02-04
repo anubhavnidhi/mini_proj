@@ -18,6 +18,7 @@
 #include <limits.h>
 
 #define MAXBUF 512*1024
+#define LOOPS 1000
 int datasz;
 int itr;
 struct timespec start, stop;
@@ -49,7 +50,7 @@ void getargs(int *datasz, int *itr, int argc, char *argv[])
 int main(int argc, char *argv[]){
 
 	//Initializations
-	int i,fd;
+	int i,fd, j, k;
 	struct shmem *ptr;
 	uint64_t rtt, minrtt = UINT32_MAX;
 	getargs(&datasz, &itr, argc, argv);
@@ -73,7 +74,7 @@ int main(int argc, char *argv[]){
 	//initialize semaphores
 	if(sem_init(&ptr->mutex, 1, 1) != 0 )
 		fprintf(stderr,"sem_init error"), exit(-2);
-	if(sem_init(&ptr->empty, 1, MAXBUF) != 0 )
+	if(sem_init(&ptr->empty, 1, 1) != 0 )
 		fprintf(stderr,"sem_init error"), exit(-2);
 	if(sem_init(&ptr->full, 1, 0) != 0 )
 		fprintf(stderr,"sem_init error"), exit(-2);
@@ -94,17 +95,19 @@ int main(int argc, char *argv[]){
 		*((char*)ctemp) = 's';
 
 		//read parent's data
-		sem_wait(&ptr->full);
-		sem_wait(&ptr->mutex);
-		memcpy((void*)tmp, (void*)ptr->buffer, datasz);
-		printf("Child: Data read %s of data size %d\n", tmp, datasz);
-		sem_post(&ptr->mutex);
-		sem_post(&ptr->empty);
-		
+		for(k = 0; k < LOOPS; k++){
+			sem_wait(&ptr->full);
+			sem_wait(&ptr->mutex);
+			memcpy((void*)tmp, (void*)ptr->buffer, datasz);
+			//printf("Child: Data read %s of data size %d\n", tmp, datasz);
+			sem_post(&ptr->mutex);
+			sem_post(&ptr->empty);
+		}
+
 		//write child data
 		sem_wait(&ptr->mutex);
 		memcpy((void*)ptr->buffer, (void*)ctemp, datasz);
-		printf("Child: Data written %s \n", ctemp);		
+		//printf("Child: Data written %s \n", ctemp);		
 	      	sem_post(&ptr->mutex);		
 	      	sem_post(&ptr->child);	
 		//printf("Child complete...\n");
@@ -115,19 +118,20 @@ int main(int argc, char *argv[]){
 	else{
 		clock_gettime(CLOCK_MONOTONIC, &start);	
 		//write parent data
-		sem_wait(&ptr->empty);
-		sem_wait(&ptr->mutex);
-		memcpy((void*)ptr->buffer, (void*)temp, datasz);
-		printf("Parent: Data written %s of data size %d\n", temp, datasz);
-	      	sem_post(&ptr->mutex);
-	      	sem_post(&ptr->full);
-		
+		for(j = 0; j < LOOPS; j++){	
+			sem_wait(&ptr->empty);
+			sem_wait(&ptr->mutex);
+			memcpy((void*)ptr->buffer, (void*)temp, datasz);
+			//printf("Parent: Data written %s of data size %d\n", temp, datasz);
+		      	sem_post(&ptr->mutex);
+		      	sem_post(&ptr->full);
+		}
 		//read child's data
 		char *ptmp = (char *)malloc(1 * sizeof(char));
 		sem_wait(&ptr->child);
 		sem_wait(&ptr->mutex);
 		memcpy((void*)ptmp, (void*)ptr->buffer, datasz);
-		printf("Parent: Data read %s \n", ptmp);	
+		//printf("Parent: Data read %s \n", ptmp);	
 		sem_post(&ptr->mutex);
 		//printf("Parent complete...\n");
 

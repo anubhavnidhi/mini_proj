@@ -81,39 +81,22 @@ int main(int argc, char *argv[])
                 
             while(num<numPackets)
             {
-                //begin = rdtsc();
                 if(write(readpipe[1],buf,strlen(buf)+1) < 0)
                 {
                     printf("Child can't write\n");
-                }        
-                if(read(writepipe[0],s,sizeof(s)) < 0)
+                }
+                printf("CHILD %d\n",num);           
+                num++;
+            }
+            if(read(writepipe[0],s,sizeof(s)) < 0)
                 {
                     printf("Parent can't read\n");
                 }
-                //printf("CHILD BUFFER: %s\n",buf);
-                //end = rdtsc();
-
-                  //diff = (end-begin);
-                num++;
-            }
-            //printf("Number %d\n",num);
-            //printf("Child: Received string: %s\n", buf);
-            //printf("Latency Average = %llu nanoseconds\n", (long long unsigned int) ((rAverage*1.0)/2.0)/(numPackets));
-            //printf("bAverage = %Lf bytes/nanoseconds\n", (long double)(2*numPackets*STRINGSIZE*1.0)/(rAverage*1.0));
-            /*printf("\nSet of latencies");
-            for(j=0;j<iter;j++)
-                printf("\n%d %llu",j,latency[j]);*/
             clock_gettime(CLOCK_MONOTONIC, &stop);
             remainderDelay = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
-            //printf("%d %llu\n",iter,(long long unsigned int)remainderDelay);
-            rAverage+=remainderDelay;
-            latency[iter] = remainderDelay/2.0;
-            //  latency[iter] = ((double) diff / frequency)*1000000.0/2.0;
-            iter++;
-            //long median = sort(latency,iter);
-            double micro = (remainderDelay/2.0)/(float)1000.0;
-            //printf("\nMed %llu, %lf\n",median,micro);
-            printf("\n%d %lf",STRINGSIZE*numPackets,micro);
+            printf("%llu delay %d\n",remainderDelay,numPackets);
+            double micro = (remainderDelay/(double)numPackets)/(double)STRINGSIZE;
+            printf("\n%d %lf",STRINGSIZE,STRINGSIZE/micro);
             exit(0); 
     }
     else
@@ -127,17 +110,14 @@ int main(int argc, char *argv[])
                 if(read(readpipe[0],buf,sizeof(buf)) < 0)
                 {
                     printf("Parent can't read\n");
-                }
-
-                //printf("%d PARENT BUFFER: %s\n",num,buf);
-
-                if(write(writepipe[1],s,strlen(s)+1) < 0)
-                {
-                    printf("Parent can't write\n");
-                }
+                } 
+                printf("PAR %d: %s\n",num,buf); 
                 num++;
             }
-            //printf("Number %d\n",num);
+            if(write(writepipe[1],s,strlen(s)+1) < 0)
+            {
+                printf("Parent can't write\n");
+            }
     }
     close(readpipe[1]);
     close(writepipe[0]);

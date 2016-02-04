@@ -36,18 +36,12 @@ long sort(long* number, int n)
             }
         }
     }
-    //for(i=0;i<n;i++)
-    //    printf("%llu\n",number[i]);
-    
     return number[0]; 
 
 }
 
 int main(int argc, char *argv[])
 {
-    //unsigned long long begin,end,diff;
-    //unsigned long long frequency = 2128047;
-  
     int sockfd, portno, n,j;
     pid_t pid;
     struct sockaddr_in serv_addr;
@@ -99,42 +93,20 @@ int main(int argc, char *argv[])
         memset( buffer, 'a', sizeof(char)*STRINGSIZE );
         buffer[STRINGSIZE-1]='\0';
         clock_gettime(CLOCK_MONOTONIC, &start);
+        
         for(j=1; j<=numPackets; j++){
-            //begin = rdtsc();
-
             n = send(sockfd,buffer,sizeof(buffer),0);
             if (n < 0) 
                  perror("ERROR writing to socket");
-            //bzero(buffer,STRINGSIZE);
-            n = recv(sockfd,s,sizeof(s),0);
-            //printf("CHILD BUFFER: %s\n",buffer);
-            if (n < 0) 
-                 perror("ERROR reading from socket");
-            //end = rdtsc();
-
-            //diff = (end-begin);
-            //printf("Read done\n");
-            
-            //printf("Data: %s\n",buffer);
         }
-        clock_gettime(CLOCK_MONOTONIC, &stop);
-        remainderDelay = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
-        rAverage+=remainderDelay;
-        //latency[iter] = remainderDelay/2.0;
-        //latency[iter] = ((double) diff / frequency)*1000000.0/2.0;
-        //printf("%d %llu\n",iter,(long long unsigned int)remainderDelay);
-        iter++;
+        n = recv(sockfd,s,sizeof(s),0);
         if (n < 0) 
              perror("ERROR reading from socket");
-        //printf("Latency Average = %llu nanoseconds\n", (long long unsigned int) ((rAverage*1.0)/2.0)/(numPackets));
-        //printf("bAverage = %Lf bytes/nanoseconds\n", (long double)(2*numPackets*STRINGSIZE*1.0)/(rAverage*1.0)); 
-        /*printf("\nSet of latencies");
-        for(j=0;j<iter;j++)
-            printf("\n%d %llu",j,latency[j]);*/
-        //unsigned long median = sort(latency,iter);
-        double micro = (remainderDelay/2.0)/(float)1000.0;
-        //printf("\nMed %llu, %lf\n",median,micro);
-        printf("\n%d %lf",STRINGSIZE*numPackets,micro);
+        
+        clock_gettime(CLOCK_MONOTONIC, &stop);
+        remainderDelay = 1e9L * (stop.tv_sec - start.tv_sec) + stop.tv_nsec - start.tv_nsec;
+        double micro = ((remainderDelay)/(float)1000.0)/numPackets;
+        printf("\n%d %lf",STRINGSIZE,STRINGSIZE/micro);
         close(sockfd);
         exit(0);
     }
@@ -177,21 +149,17 @@ int main(int argc, char *argv[])
         int addrlen=sizeof(client_addr);
 
         /*---accept a connection (creating a data pipe)---*/
-        //printf("\nWaiting to accept\n");
+        
         clientfd = accept(ser_sock, (struct sockaddr*)&client_addr, &addrlen);
-        //printf("%s:%d connected\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
-
         /*---Echo back anything sent---*/
         int num = 0;
+        
         while(num<numPackets){
             recv(clientfd, buf, sizeof(buf), 0);
-            //printf("%d PARENT BUFFER: %s\n",num,buf);
-            send(clientfd, s, sizeof(s), 0);
-            //printf("%s\n",buf);
             num++;
         }
-        //printf("\nNumber %d",num);
-        /*---Close data connection---*/
+        send(clientfd, s, sizeof(s), 0);
+            
         close(clientfd);
     
         /*---Clean up (should never get here!)---*/

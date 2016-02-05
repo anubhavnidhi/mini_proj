@@ -54,7 +54,7 @@ int main(int argc, char *argv[]){
 	uint64_t rtt, minrtt = UINT32_MAX;
 	getargs(&datasz, &itr, argc, argv);
         //printf("%d %d \n", datasz, itr);
-	
+    
 	//Shared memory using mmap
 	fd = open("buf.txt", O_RDWR | O_CREAT | O_TRUNC, (mode_t)0660);
     	if (fd == -1) {
@@ -70,6 +70,7 @@ int main(int argc, char *argv[]){
 		fprintf(stderr,"Error mmapping the file");
 		return -1;
 	}
+     
 	//initialize semaphores
 	if(sem_init(&ptr->mutex, 1, 1) != 0 )
 		fprintf(stderr,"sem_init error"), exit(-2);
@@ -84,16 +85,16 @@ int main(int argc, char *argv[]){
 	char *temp = (char*)malloc(datasz * sizeof(char));
 	for(i = 0; i < datasz; i++)
 		*((char*)temp+i) = 't';
+	char *ctemp = (char*)malloc(datasz * sizeof(char));
+	for(i = 0; i < datasz; i++)
+		*((char*)ctemp+i) = 's';
+	char *tmp = (char *)malloc(datasz * sizeof(char));
+	char *ptmp = (char *)malloc(datasz * sizeof(char));
 
-        for(i = 0; i < itr; i++){	
 	int pid = fork();
+	for(i = 0; i < itr; i++){
 	if (pid == 0){
 		//Child process
-		char *tmp = (char *)malloc(datasz * sizeof(char));
-		char *ctemp = (char*)malloc(datasz * sizeof(char));
-		for(i = 0; i < datasz; i++)
-			*((char*)ctemp+i) = 's';
-
 		//read parent's data
 		sem_wait(&ptr->full);
 		sem_wait(&ptr->mutex);
@@ -122,7 +123,6 @@ int main(int argc, char *argv[]){
 	      	sem_post(&ptr->full);
 		
 		//read child's data
-		char *ptmp = (char *)malloc(datasz * sizeof(char));
 		sem_wait(&ptr->child);
 		sem_wait(&ptr->mutex);
 		memcpy((void*)ptmp, (void*)ptr->buffer, datasz);
@@ -135,10 +135,9 @@ int main(int argc, char *argv[]){
 		//printf("%dB = %llu us\n", datasz, (long long unsigned int) ((rtt*1.0)/2000.0) );
 		if(minrtt > rtt)
 			minrtt = rtt;
-		
 	  }
-       }
-	if(minrtt != UINT32_MAX)
+	}
+       	if(minrtt != UINT32_MAX)
 		printf("%d %lf\n", datasz, (double) (minrtt/2000.0) );
 	close(fd);
 	//printf("Complete...\n");

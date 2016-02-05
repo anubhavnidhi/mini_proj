@@ -85,8 +85,8 @@ int main(int argc, char *argv[]){
 	for(i = 0; i < datasz; i++)
 		*((char*)temp+i) = 't';
 
-	int pid = fork();
         for(i = 0; i < itr; i++){	
+	int pid = fork();
 	if (pid == 0){
 		//Child process
 		char *tmp = (char *)malloc(datasz * sizeof(char));

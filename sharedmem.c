@@ -90,8 +90,9 @@ int main(int argc, char *argv[]){
 	if (pid == 0){
 		//Child process
 		char *tmp = (char *)malloc(datasz * sizeof(char));
-		char *ctemp = (char*)malloc(1 * sizeof(char));
-		*((char*)ctemp) = 's';
+		char *ctemp = (char*)malloc(datasz * sizeof(char));
+		for(i = 0; i < datasz; i++)
+			*((char*)ctemp+i) = 's';
 
 		//read parent's data
 		sem_wait(&ptr->full);
@@ -103,7 +104,7 @@ int main(int argc, char *argv[]){
 		
 		//write child data
 		sem_wait(&ptr->mutex);
-		memcpy((void*)ptr->buffer, (void*)ctemp, 1);
+		memcpy((void*)ptr->buffer, (void*)ctemp, datasz);
 		//printf("Child: Data written %s \n", ctemp);		
 	      	sem_post(&ptr->mutex);		
 	      	sem_post(&ptr->child);	
@@ -121,10 +122,10 @@ int main(int argc, char *argv[]){
 	      	sem_post(&ptr->full);
 		
 		//read child's data
-		char *ptmp = (char *)malloc(1 * sizeof(char));
+		char *ptmp = (char *)malloc(datasz * sizeof(char));
 		sem_wait(&ptr->child);
 		sem_wait(&ptr->mutex);
-		memcpy((void*)ptmp, (void*)ptr->buffer, 1);
+		memcpy((void*)ptmp, (void*)ptr->buffer, datasz);
 		//printf("Parent: Data read %s \n", ptmp);	
 		sem_post(&ptr->mutex);
 		//printf("Parent complete...\n");
@@ -138,7 +139,7 @@ int main(int argc, char *argv[]){
 	  }
        }
 	if(minrtt != UINT32_MAX)
-		printf("%dB = %lf us\n", datasz, (double) (minrtt/2000.0) );
+		printf("%d %lf\n", datasz, (double) (minrtt/2000.0) );
 	close(fd);
 	//printf("Complete...\n");
 	exit(0);
